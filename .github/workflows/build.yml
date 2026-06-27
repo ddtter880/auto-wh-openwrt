@@ -1,4 +1,4 @@
-﻿name: Build OpenWrt ipk
+name: Build OpenWrt ipk
 
 on:
   push:
@@ -8,124 +8,74 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-arm:
-    name: Build ipk (ARM Cortex-A53 / IPQ6000)
+  build:
+    name: "${{ matrix.arch }} / ${{ matrix.branch }}"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_cortex-a53
+          - x86_64
+        branch:
+          - openwrt-24.10
+        include:
+          - arch: aarch64_cortex-a53
+            branch: openwrt-24.10
+            package_extension: ipk
+          - arch: x86_64
+            branch: openwrt-24.10
+            package_extension: ipk
+
     container:
-      image: openwrt/sdk:aarch64_cortex-a53
+      image: openwrt/sdk:${{ matrix.arch }}-${{ matrix.branch }}
       options: --user root
-    defaults:
-      run:
-        working-directory: /builder
 
     steps:
-      - name: Fix permissions
-        run: chmod -R 777 /__w || true
-
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: /builder/repo
 
-      - name: Setup SDK
+      - name: Initialize SDK
+        working-directory: /builder
         run: |
-          ./setup.sh || true
+          HOME=/builder ./setup.sh || true
           ls Makefile
-          head -5 Makefile
 
-      - name: Update feeds
+      - name: Add custom feed
+        working-directory: /builder
         run: |
-          ./scripts/feeds update packages luci
-          ./scripts/feeds install -a
+          echo "src-link whu_auth ${{ github.workspace }}" >> feeds.conf
+          cat feeds.conf
 
-      - name: Copy package source
+      - name: Update and install feeds
+        working-directory: /builder
         run: |
-          mkdir -p package/luci-app-whu-auth
-          cp -r repo/luci-app-whu-auth/* package/luci-app-whu-auth/
+          ./scripts/feeds update whu_auth
+          ./scripts/feeds install -a -p whu_auth
 
       - name: Configure build
+        working-directory: /builder
         run: |
-          cat > .config << 'EOF'
-          CONFIG_TARGET_armvirt=y
-          CONFIG_TARGET_armvirt_64=y
-          CONFIG_PACKAGE_luci-app-whu-auth=m
-          EOF
+          echo "CONFIG_PACKAGE_luci-app-whu-auth=m" > .config
           make defconfig
 
       - name: Build ipk
-        run: make package/luci-app-whu-auth/compile V=s
-
-      - name: Collect artifacts
-        run: |
-          mkdir -p /tmp/output
-          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} /tmp/output/ \; || true
-          ls -la /tmp/output/ || echo "No ipk found"
-
-      - name: Upload ARM ipk
-        uses: actions/upload-artifact@v4
-        with:
-          name: luci-app-whu-auth-arm-aarch64
-          path: /tmp/output/*.ipk
-          if-no-files-found: warn
-          retention-days: 30
-
-  build-x86:
-    name: Build ipk (x86_64)
-    runs-on: ubuntu-latest
-    container:
-      image: openwrt/sdk:x86-64
-      options: --user root
-    defaults:
-      run:
         working-directory: /builder
-
-    steps:
-      - name: Fix permissions
-        run: chmod -R 777 /__w || true
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: /builder/repo
-
-      - name: Setup SDK
         run: |
-          ./setup.sh || true
-          ls Makefile
-          head -5 Makefile
-
-      - name: Update feeds
-        run: |
-          ./scripts/feeds update packages luci
-          ./scripts/feeds install -a
-
-      - name: Copy package source
-        run: |
-          mkdir -p package/luci-app-whu-auth
-          cp -r repo/luci-app-whu-auth/* package/luci-app-whu-auth/
-
-      - name: Configure build
-        run: |
-          cat > .config << 'EOF'
-          CONFIG_TARGET_x86=y
-          CONFIG_TARGET_x86_64=y
-          CONFIG_PACKAGE_luci-app-whu-auth=m
-          EOF
-          make defconfig
-
-      - name: Build ipk
-        run: make package/luci-app-whu-auth/compile V=s
+          make package/luci-app-whu-auth/compile V=s
 
       - name: Collect artifacts
+        working-directory: /builder
         run: |
-          mkdir -p /tmp/output
-          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} /tmp/output/ \; || true
-          ls -la /tmp/output/ || echo "No ipk found"
+          echo "=== Looking for ipk files ==="
+          find ./bin -type f -name "luci-app-whu-auth*.ipk" -ls
+          find ./bin -type f -name "luci-app-whu-auth*.ipk" -exec cp {} /builder/ \;
+          ls -la /builder/luci-app-whu-auth*.ipk || echo "No ipk found"
 
-      - name: Upload x86 ipk
+      - name: Upload ipk
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-whu-auth-x86-64
-          path: /tmp/output/*.ipk
+          name: luci-app-whu-auth-${{ matrix.arch }}-${{ matrix.branch }}
+          path: /builder/luci-app-whu-auth*.ipk
           if-no-files-found: warn
           retention-days: 30

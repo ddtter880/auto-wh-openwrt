@@ -1,7 +1,3 @@
-﻿# LuCI App WHU Auth - WHU Campus Network Auto-Authentication
-# Makefile for OpenWrt ipk package
-# NOTE: This Makefile is intended for use inside the OpenWrt build system.
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-whu-auth
@@ -11,10 +7,31 @@ PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=cccht
 
-LUCI_TITLE:=LuCI WHU Auth - WHU Campus Network Auto-Authentication
-LUCI_DESCRIPTION:=Automatically authenticate to WuHan University campus network portal
-LUCI_DEPENDS:=+luci-base +curl +jsonfilter
+include $(INCLUDE_DIR)/package.mk
 
-include $(TOPDIR)/feeds/luci/luci.mk
+define Package/luci-app-whu-auth
+  SECTION:=luci
+  CATEGORY:=LuCI
+  SUBMENU:=3. Applications
+  TITLE:=WHU Campus Network Auto-Authentication
+  DEPENDS:=+luci-base +curl
+  PKGARCH:=all
+endef
 
-# call BuildPackage - OpenWrt buildroot signature
+define Package/luci-app-whu-auth/description
+  Automatically authenticate to WuHan University campus network portal.
+  Based on auto-whu-openwrt project.
+endef
+
+define Build/Compile
+endef
+
+define Package/luci-app-whu-auth/conffiles
+/etc/config/whu-auth
+endef
+
+define Package/luci-app-whu-auth/install
+	$(CP) ./root/* $(1)/
+endef
+
+$(eval $(call BuildPackage,luci-app-whu-auth))
