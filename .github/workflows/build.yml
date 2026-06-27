@@ -11,9 +11,14 @@ jobs:
   build-arm:
     name: Build ipk (ARM Cortex-A53 / IPQ6000)
     runs-on: ubuntu-latest
-    container: openwrt/sdk:aarch64_cortex-a53
+    container:
+      image: openwrt/sdk:aarch64_cortex-a53
+      options: --user root
 
     steps:
+      - name: Fix permissions
+        run: chmod -R 777 /__w || true
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -50,7 +55,10 @@ jobs:
         run: |
           mkdir -p output
           find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
-          ls -la output/ || echo "No ipk found"
+          echo "=== Build output ==="
+          ls -la output/ || echo "No ipk found in output/"
+          echo "=== Full find ==="
+          find bin/ -name "*.ipk" | head -20
 
       - name: Upload ARM ipk
         uses: actions/upload-artifact@v4
@@ -62,9 +70,14 @@ jobs:
   build-x86:
     name: Build ipk (x86_64)
     runs-on: ubuntu-latest
-    container: openwrt/sdk:x86-64
+    container:
+      image: openwrt/sdk:x86-64
+      options: --user root
 
     steps:
+      - name: Fix permissions
+        run: chmod -R 777 /__w || true
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -100,7 +113,10 @@ jobs:
         run: |
           mkdir -p output
           find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
-          ls -la output/ || echo "No ipk found"
+          echo "=== Build output ==="
+          ls -la output/ || echo "No ipk found in output/"
+          echo "=== Full find ==="
+          find bin/ -name "*.ipk" | head -20
 
       - name: Upload x86 ipk
         uses: actions/upload-artifact@v4
