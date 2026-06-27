@@ -37,32 +37,47 @@ jobs:
           HOME=/builder ./setup.sh || true
           test -f Makefile
 
-      - name: Add custom feed and build
+      - name: Register and build package
         working-directory: /builder
         run: |
-          # Register the package directory as a feed
-          echo "src-link whu_auth ${{ github.workspace }}/luci-app-whu-auth" >> feeds.conf
+          # src-link expects a directory with package subdirectories
+          # Each subdir must have a Makefile
+          # Our repo structure: $GITHUB_WORKSPACE/luci-app-whu-auth/Makefile
+          echo "src-link custom_packages ${{ github.workspace }}" >> feeds.conf
           cat feeds.conf
 
-          # Update only our feed
-          ./scripts/feeds update whu_auth
-          ./scripts/feeds install -a -p whu_auth
+          # Update our custom feed
+          ./scripts/feeds update custom_packages
+          ./scripts/feeds install -a -p custom_packages
 
-          # Verify the package is found
-          echo "---"
-          ./scripts/feeds list | grep whu-auth || echo "WARNING: package not found in feeds"
+          # Check if package was found
+          echo "=== Feeds list ==="
+          ./scripts/feeds list | grep -i whu || echo "Package NOT found in feeds"
 
-          # Configure
+          # Check package directory
+          echo "=== Package dir ==="
+          ls -la package/custom_packages/ 2>/dev/null || ls -la package/feeds/custom_packages/ 2>/dev/null || echo "No package dir"
+
+          # Configure with the package
           echo "CONFIG_PACKAGE_luci-app-whu-auth=m" > .config
           make defconfig
+          grep -i whu .config || echo "Package NOT in .config"
 
           # Build
           make package/luci-app-whu-auth/compile V=s
 
-      - name: Collect and upload
+      - name: Collect artifacts
+        working-directory: /builder
+        run: |
+          find bin/ -name "luci-app-whu-auth*.ipk" -ls
+          mkdir -p /tmp/output
+          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} /tmp/output/ \;
+          ls -la /tmp/output/
+
+      - name: Upload ipk
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-whu-auth-${{ matrix.arch }}
-          path: /builder/bin/**/luci-app-whu-auth*.ipk
+          path: /tmp/output/*.ipk
           if-no-files-found: warn
           retention-days: 30
