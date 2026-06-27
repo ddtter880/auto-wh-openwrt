@@ -14,6 +14,9 @@ jobs:
     container:
       image: openwrt/sdk:aarch64_cortex-a53
       options: --user root
+    defaults:
+      run:
+        working-directory: /builder
 
     steps:
       - name: Fix permissions
@@ -21,16 +24,14 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: /builder/repo
 
       - name: Setup SDK
         run: |
-          if [ -f /builder/setup.sh ]; then
-            cd /builder && ./setup.sh && cd -
-          elif [ -f ./setup.sh ]; then
-            ./setup.sh
-          fi
-          [ ! -d scripts ] && ln -sf /builder/scripts scripts 2>/dev/null || true
-          ls -la scripts/ 2>/dev/null || echo "No scripts dir"
+          ./setup.sh || true
+          ls Makefile
+          head -5 Makefile
 
       - name: Update feeds
         run: |
@@ -40,7 +41,7 @@ jobs:
       - name: Copy package source
         run: |
           mkdir -p package/luci-app-whu-auth
-          cp -r luci-app-whu-auth/* package/luci-app-whu-auth/
+          cp -r repo/luci-app-whu-auth/* package/luci-app-whu-auth/
 
       - name: Configure build
         run: |
@@ -52,21 +53,19 @@ jobs:
           make defconfig
 
       - name: Build ipk
-        run: |
-          make package/luci-app-whu-auth/compile V=s
+        run: make package/luci-app-whu-auth/compile V=s
 
       - name: Collect artifacts
         run: |
-          mkdir -p output
-          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
-          echo "=== Build output ==="
-          ls -la output/ || echo "No ipk found"
+          mkdir -p /tmp/output
+          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} /tmp/output/ \; || true
+          ls -la /tmp/output/ || echo "No ipk found"
 
       - name: Upload ARM ipk
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-whu-auth-arm-aarch64
-          path: output/*.ipk
+          path: /tmp/output/*.ipk
           if-no-files-found: warn
           retention-days: 30
 
@@ -76,6 +75,9 @@ jobs:
     container:
       image: openwrt/sdk:x86-64
       options: --user root
+    defaults:
+      run:
+        working-directory: /builder
 
     steps:
       - name: Fix permissions
@@ -83,16 +85,14 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: /builder/repo
 
       - name: Setup SDK
         run: |
-          if [ -f /builder/setup.sh ]; then
-            cd /builder && ./setup.sh && cd -
-          elif [ -f ./setup.sh ]; then
-            ./setup.sh
-          fi
-          [ ! -d scripts ] && ln -sf /builder/scripts scripts 2>/dev/null || true
-          ls -la scripts/ 2>/dev/null || echo "No scripts dir"
+          ./setup.sh || true
+          ls Makefile
+          head -5 Makefile
 
       - name: Update feeds
         run: |
@@ -102,7 +102,7 @@ jobs:
       - name: Copy package source
         run: |
           mkdir -p package/luci-app-whu-auth
-          cp -r luci-app-whu-auth/* package/luci-app-whu-auth/
+          cp -r repo/luci-app-whu-auth/* package/luci-app-whu-auth/
 
       - name: Configure build
         run: |
@@ -114,20 +114,18 @@ jobs:
           make defconfig
 
       - name: Build ipk
-        run: |
-          make package/luci-app-whu-auth/compile V=s
+        run: make package/luci-app-whu-auth/compile V=s
 
       - name: Collect artifacts
         run: |
-          mkdir -p output
-          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
-          echo "=== Build output ==="
-          ls -la output/ || echo "No ipk found"
+          mkdir -p /tmp/output
+          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} /tmp/output/ \; || true
+          ls -la /tmp/output/ || echo "No ipk found"
 
       - name: Upload x86 ipk
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-whu-auth-x86-64
-          path: output/*.ipk
+          path: /tmp/output/*.ipk
           if-no-files-found: warn
           retention-days: 30
