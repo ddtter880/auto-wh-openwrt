@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: "${{ matrix.arch }} / ${{ matrix.branch }}"
+    name: "${{ matrix.arch }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -17,15 +17,11 @@ jobs:
         arch:
           - aarch64_cortex-a53
           - x86_64
-        branch:
-          - openwrt-24.10
         include:
           - arch: aarch64_cortex-a53
             branch: openwrt-24.10
-            package_extension: ipk
           - arch: x86_64
             branch: openwrt-24.10
-            package_extension: ipk
 
     container:
       image: openwrt/sdk:${{ matrix.arch }}-${{ matrix.branch }}
@@ -39,43 +35,34 @@ jobs:
         working-directory: /builder
         run: |
           HOME=/builder ./setup.sh || true
-          ls Makefile
+          test -f Makefile
 
-      - name: Add custom feed
+      - name: Add custom feed and build
         working-directory: /builder
         run: |
-          echo "src-link whu_auth ${{ github.workspace }}" >> feeds.conf
+          # Register the package directory as a feed
+          echo "src-link whu_auth ${{ github.workspace }}/luci-app-whu-auth" >> feeds.conf
           cat feeds.conf
 
-      - name: Update and install feeds
-        working-directory: /builder
-        run: |
+          # Update only our feed
           ./scripts/feeds update whu_auth
           ./scripts/feeds install -a -p whu_auth
 
-      - name: Configure build
-        working-directory: /builder
-        run: |
+          # Verify the package is found
+          echo "---"
+          ./scripts/feeds list | grep whu-auth || echo "WARNING: package not found in feeds"
+
+          # Configure
           echo "CONFIG_PACKAGE_luci-app-whu-auth=m" > .config
           make defconfig
 
-      - name: Build ipk
-        working-directory: /builder
-        run: |
+          # Build
           make package/luci-app-whu-auth/compile V=s
 
-      - name: Collect artifacts
-        working-directory: /builder
-        run: |
-          echo "=== Looking for ipk files ==="
-          find ./bin -type f -name "luci-app-whu-auth*.ipk" -ls
-          find ./bin -type f -name "luci-app-whu-auth*.ipk" -exec cp {} /builder/ \;
-          ls -la /builder/luci-app-whu-auth*.ipk || echo "No ipk found"
-
-      - name: Upload ipk
+      - name: Collect and upload
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-whu-auth-${{ matrix.arch }}-${{ matrix.branch }}
-          path: /builder/luci-app-whu-auth*.ipk
+          name: luci-app-whu-auth-${{ matrix.arch }}
+          path: /builder/bin/**/luci-app-whu-auth*.ipk
           if-no-files-found: warn
           retention-days: 30
