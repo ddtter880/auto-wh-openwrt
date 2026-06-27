@@ -1,0 +1,46 @@
+﻿{
+    "admin/services/whu-auth": {
+        "title": "WHU Auth",
+        "order": 60,
+        "action": {
+            "type": "firstchild",
+            "targets": ["admin/services/whu-auth/settings", "admin/services/whu-auth/status", "admin/services/whu-auth/log"]
+        },
+        "depends": {
+            "acl": ["luci-app-whu-auth"]
+        }
+    },
+    "admin/services/whu-auth/settings": {
+        "title": "Settings",
+        "order": 1,
+        "action": {
+            "type": "view",
+            "path": "whu-auth/settings"
+        },
+        "depends": {
+            "acl": ["luci-app-whu-auth"]
+        }
+    },
+    "admin/services/whu-auth/status": {
+        "title": "Status",
+        "order": 2,
+        "action": {
+            "type": "view",
+            "path": "whu-auth/status/status"
+        },
+        "depends": {
+            "acl": ["luci-app-whu-auth"]
+        }
+    },
+    "admin/services/whu-auth/log": {
+        "title": "Log",
+        "order": 3,
+        "action": {
+            "type": "view",
+            "path": "whu-auth/log"
+        },
+        "depends": {
+            "acl": ["luci-app-whu-auth"]
+        }
+    }
+}

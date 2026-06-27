@@ -1,0 +1,44 @@
+﻿<%+header%>
+
+<h2><%:WHU Auth Log%></h2>
+
+<fieldset class="cbi-section">
+    <legend><%:Authentication Log%></legend>
+    <div style="margin: 10px 0;">
+        <input type="button" class="cbi-button cbi-button-action" value="<%:Refresh Log%>" onclick="refreshLog()" />
+        <input type="button" class="cbi-button cbi-button-reset" value="<%:Clear Log%>" onclick="clearLog()" />
+    </div>
+    <textarea id="log_content" style="width:100%;height:400px;font-family:monospace;font-size:12px;resize:vertical;" readonly="readonly">
+<%:Loading...%>
+    </textarea>
+</fieldset>
+
+<script type="text/javascript">
+//<![CDATA[
+
+function refreshLog() {
+    XHR.get('<%=url("admin/services/whu-auth/action")%>', { action: 'log' },
+        function(x, data) {
+            if (data && data.log) {
+                document.getElementById('log_content').value = data.log;
+            }
+        }
+    );
+}
+
+function clearLog() {
+    if (confirm('<%:Are you sure you want to clear the log?%>')) {
+        XHR.get('<%=url("admin/services/whu-auth/action")%>', { action: 'clear_log' },
+            function(x, data) {
+                refreshLog();
+            }
+        );
+    }
+}
+
+refreshLog();
+
+//]]>
+</script>
+
+<%+footer%>

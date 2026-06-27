@@ -1,0 +1,54 @@
+name: Build OpenWrt ipk
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: openwrtorg/sdk:x86-64-v23.05.3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Copy package source
+        run: |
+          mkdir -p package/luci-app-whu-auth
+          cp -r luci-app-whu-auth/* package/luci-app-whu-auth/
+
+      - name: Configure build
+        run: |
+          cat > .config << 'EOF'
+          CONFIG_TARGET_x86=y
+          CONFIG_TARGET_x86_64=y
+          CONFIG_PACKAGE_luci-app-whu-auth=y
+          EOF
+          make defconfig
+
+      - name: Build ipk
+        run: |
+          make package/luci-app-whu-auth/compile V=s
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p output
+          find bin/packages/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \;
+          find bin/targets/ -name "*.ipk" -exec cp {} output/ \;
+          ls -la output/
+
+      - name: Upload ipk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-whu-auth-ipk
+          path: output/*.ipk
+          retention-days: 30

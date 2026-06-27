@@ -1,0 +1,14 @@
+﻿{
+    "whu-auth": {
+        "description": "WHU Campus Network Auto-Authentication",
+        "read": {
+            "ubus": {
+                "luci": ["getFeatures"]
+            },
+            "uci": ["whu-auth"]
+        },
+        "write": {
+            "uci": ["whu-auth"]
+        }
+    }
+}

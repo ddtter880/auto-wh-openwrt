@@ -1,0 +1,120 @@
+﻿<%+header%>
+
+<h2><%:WHU Auth Status%></h2>
+
+<fieldset class="cbi-section">
+    <legend><%:Connection Status%></legend>
+    <table class="table" width="100%" cellspacing="10">
+        <tr>
+            <td width="33%"><strong><%:Daemon Status%>:</strong></td>
+            <td id="daemon_status"><%:Loading...%></td>
+        </tr>
+        <tr>
+            <td><strong><%:Auth State%>:</strong></td>
+            <td id="auth_state"><%:Loading...%></td>
+        </tr>
+        <tr>
+            <td><strong><%:Internet%>:</strong></td>
+            <td id="internet_status"><%:Loading...%></td>
+        </tr>
+        <tr>
+            <td><strong><%:PID%>:</strong></td>
+            <td id="daemon_pid"><%:N/A%></td>
+        </tr>
+    </table>
+</fieldset>
+
+<fieldset class="cbi-section">
+    <legend><%:Quick Actions%></legend>
+    <div style="margin: 10px 0;">
+        <input type="button" class="cbi-button cbi-button-apply" value="<%:Start Service%>" onclick="doAction('start')" />
+        <input type="button" class="cbi-button cbi-button-reset" value="<%:Stop Service%>" onclick="doAction('stop')" />
+        <input type="button" class="cbi-button cbi-button-apply" value="<%:Restart Service%>" onclick="doAction('restart')" />
+        <input type="button" class="cbi-button cbi-button-action" value="<%:Refresh Status%>" onclick="refreshStatus()" />
+    </div>
+</fieldset>
+
+<fieldset class="cbi-section">
+    <legend><%:Connection Test%></legend>
+    <div style="margin: 10px 0;">
+        <input type="button" class="cbi-button cbi-button-action" value="<%:Check Connection%>" onclick="checkConnection()" id="check_btn" />
+        <span id="check_result" style="margin-left: 10px;"></span>
+    </div>
+</fieldset>
+
+<script type="text/javascript">
+//<![CDATA[
+
+function refreshStatus() {
+    XHR.get('<%=url("admin/services/whu-auth/get_status")%>', null,
+        function(x, data) {
+            if (data) {
+                document.getElementById('daemon_status').innerHTML =
+                    data.daemon === 'running'
+                        ? '<span style="color:green;font-weight:bold;">● <%:Running%></span>'
+                        : '<span style="color:red;font-weight:bold;">● <%:Stopped%></span>';
+
+                var stateMap = {
+                    'online': '<span style="color:green;">● <%:Online%></span>',
+                    'authenticated': '<span style="color:green;">● <%:Authenticated%></span>',
+                    'offline': '<span style="color:red;">● <%:Offline%></span>',
+                    'failed': '<span style="color:orange;">● <%:Auth Failed%></span>',
+                    'network_error': '<span style="color:orange;">● <%:Network Error%></span>',
+                    'unknown': '<span style="color:gray;">● <%:Unknown%></span>'
+                };
+                document.getElementById('auth_state').innerHTML =
+                    stateMap[data.state] || '<span style="color:gray;">● ' + data.state + '</span>';
+
+                document.getElementById('internet_status').innerHTML =
+                    data.internet === 'online'
+                        ? '<span style="color:green;">● <%:Connected%></span>'
+                        : '<span style="color:red;">● <%:Disconnected%></span>';
+
+                document.getElementById('daemon_pid').textContent = data.pid || '<%:N/A%>';
+            }
+        }
+    );
+}
+
+function doAction(action) {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.value = '<%:Processing...%>';
+
+    XHR.get('<%=url("admin/services/whu-auth/action")%>', { action: action },
+        function(x, data) {
+            btn.disabled = false;
+            btn.value = action.charAt(0).toUpperCase() + action.slice(1) + ' Service';
+            setTimeout(refreshStatus, 1000);
+        }
+    );
+}
+
+function checkConnection() {
+    var btn = document.getElementById('check_btn');
+    var result = document.getElementById('check_result');
+    btn.disabled = true;
+    btn.value = '<%:Checking...%>';
+    result.innerHTML = '';
+
+    XHR.get('<%=url("admin/services/whu-auth/action")%>', { action: 'check' },
+        function(x, data) {
+            btn.disabled = false;
+            btn.value = '<%:Check Connection%>';
+            if (data && data.status === 'online') {
+                result.innerHTML = '<span style="color:green;font-weight:bold;">✓ <%:Internet Connected%></span>';
+            } else {
+                result.innerHTML = '<span style="color:red;font-weight:bold;">✗ <%:No Internet%></span>';
+            }
+        }
+    );
+}
+
+// Auto-refresh every 10 seconds
+refreshStatus();
+var refreshTimer = setInterval(refreshStatus, 10000);
+
+//]]>
+</script>
+
+<%+footer%>

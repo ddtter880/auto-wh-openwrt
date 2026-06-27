@@ -1,0 +1,179 @@
+﻿msgid "WHU Auth"
+msgstr "WHU 认证"
+
+msgid "WHU Campus Network Authentication"
+msgstr "武汉大学校园网认证"
+
+msgid "Automatically authenticate to WuHan University campus network portal. Based on auto-whu-openwrt project."
+msgstr "自动认证武汉大学校园网 portal，基于 auto-whu-openwrt 项目。"
+
+msgid "General Settings"
+msgstr "基本设置"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Enable WHU campus network auto-authentication"
+msgstr "启用武汉大学校园网自动认证"
+
+msgid "Username"
+msgstr "用户名"
+
+msgid "Your campus network account username (student ID)"
+msgstr "您的校园网账号（学号）"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Your campus network account password"
+msgstr "您的校园网账号密码"
+
+msgid "ISP / Service Provider"
+msgstr "运营商"
+
+msgid "Select your Internet Service Provider (ISP domain for authentication)"
+msgstr "选择您的网络运营商"
+
+msgid "-- None / Default --"
+msgstr "-- 无 / 默认 --"
+
+msgid "China Telecom (电信)"
+msgstr "中国电信"
+
+msgid "China Unicom (联通)"
+msgstr "中国联通"
+
+msgid "China Mobile (移动)"
+msgstr "中国移动"
+
+msgid "Campus Network (校园网)"
+msgstr "校园网"
+
+msgid "Auth Server URL"
+msgstr "认证服务器地址"
+
+msgid "Portal authentication server address"
+msgstr "Portal 认证服务器地址"
+
+msgid "Network Interface"
+msgstr "网络接口"
+
+msgid "WAN interface used for authentication"
+msgstr "用于认证的 WAN 接口"
+
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+msgid "Check Interval (seconds)"
+msgstr "检查间隔（秒）"
+
+msgid "How often to check the connection status (default: 60s)"
+msgstr "检查连接状态的频率（默认：60 秒）"
+
+msgid "Retry Count"
+msgstr "重试次数"
+
+msgid "Number of authentication retry attempts (default: 3)"
+msgstr "认证重试次数（默认：3 次）"
+
+msgid "Connection Status"
+msgstr "连接状态"
+
+msgid "Daemon Status"
+msgstr "守护进程状态"
+
+msgid "Auth State"
+msgstr "认证状态"
+
+msgid "Internet"
+msgstr "互联网"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Online"
+msgstr "在线"
+
+msgid "Offline"
+msgstr "离线"
+
+msgid "Authenticated"
+msgstr "已认证"
+
+msgid "Auth Failed"
+msgstr "认证失败"
+
+msgid "Network Error"
+msgstr "网络错误"
+
+msgid "Connected"
+msgstr "已连接"
+
+msgid "Disconnected"
+msgstr "未连接"
+
+msgid "Quick Actions"
+msgstr "快捷操作"
+
+msgid "Start Service"
+msgstr "启动服务"
+
+msgid "Stop Service"
+msgstr "停止服务"
+
+msgid "Restart Service"
+msgstr "重启服务"
+
+msgid "Refresh Status"
+msgstr "刷新状态"
+
+msgid "Processing..."
+msgstr "处理中..."
+
+msgid "Connection Test"
+msgstr "连接测试"
+
+msgid "Check Connection"
+msgstr "检查连接"
+
+msgid "Checking..."
+msgstr "检查中..."
+
+msgid "Internet Connected"
+msgstr "已连接互联网"
+
+msgid "No Internet"
+msgstr "无互联网连接"
+
+msgid "Authentication Log"
+msgstr "认证日志"
+
+msgid "Refresh Log"
+msgstr "刷新日志"
+
+msgid "Clear Log"
+msgstr "清除日志"
+
+msgid "Are you sure you want to clear the log?"
+msgstr "确定要清除日志吗？"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Log"
+msgstr "日志"
+
+msgid "Loading..."
+msgstr "加载中..."
+
+msgid "N/A"
+msgstr "不可用"
+
+msgid "Unknown"
+msgstr "未知"

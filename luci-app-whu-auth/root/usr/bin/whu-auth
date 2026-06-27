@@ -1,0 +1,217 @@
+﻿#!/bin/sh
+# WHU Campus Network Auto-Authentication Script
+# Based on: https://github.com/cccht/auto-whu-openwrt
+# Reference: https://www.miaoer.net/posts/network/whu-openwrt-authentication
+#
+# This script handles the actual portal authentication for WuHan University
+# campus network (WHU). It detects captive portal, performs login via HTTP POST,
+# and maintains the connection with periodic health checks.
+
+. /lib/functions.sh
+
+LOG_TAG="whu-auth"
+PID_FILE="/var/run/whu-auth.pid"
+STATE_FILE="/tmp/whu-auth.state"
+
+# Default values
+USERNAME=""
+PASSWORD=""
+DOMAIN=""
+AUTH_SERVER="https://portal.whu.edu.cn"
+CHECK_INTERVAL=60
+RETRY_COUNT=3
+INTERFACE="wan"
+
+log_msg() {
+    logger -t "$LOG_TAG" "$1"
+    echo "[$LOG_TAG] $1"
+}
+
+# Check if we have internet connectivity
+check_internet() {
+    local test_urls="223.5.5.5 119.29.29.29"
+    for url in $test_urls; do
+        if curl -s --connect-timeout 3 --max-time 5 "http://$url" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Detect captive portal and get the authentication URL
+detect_portal() {
+    local response
+    response=$(curl -s --connect-timeout 5 --max-time 10 \
+        "http://www.msftconnecttest.com/connecttest.txt" 2>/dev/null)
+
+    # Check if we got redirected to portal
+    if echo "$response" | grep -qi "portal\|login\|auth"; then
+        log_msg "Captive portal detected"
+        return 0
+    fi
+
+    # Try another detection method
+    response=$(curl -s --connect-timeout 5 --max-time 10 -L \
+        "http://connect.rom.miui.com/generate_204" -w "%{http_code}" -o /dev/null 2>/dev/null)
+    if [ "$response" = "302" ] || [ "$response" = "301" ]; then
+        log_msg "Captive portal detected via redirect"
+        return 0
+    fi
+
+    return 1
+}
+
+# Get the user IP and AC info from the portal
+get_portal_info() {
+    local user_ip ac_ip ac_name
+    # Get local IP on the WAN interface
+    user_ip=$(ip addr show dev "$INTERFACE" 2>/dev/null | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+
+    if [ -z "$user_ip" ]; then
+        log_msg "Cannot get IP on interface $INTERFACE"
+        return 1
+    fi
+
+    echo "$user_ip"
+    return 0
+}
+
+# Authenticate to WHU portal
+do_auth() {
+    local user_ip="$1"
+    local response http_code
+
+    log_msg "Attempting authentication for user: $USERNAME from IP: $user_ip"
+
+    # Step 1: Get the portal page to obtain any required tokens
+    local portal_response
+    portal_response=$(curl -s --connect-timeout 10 --max-time 15 \
+        -c /tmp/whu-auth-cookies.txt \
+        "${AUTH_SERVER}/" 2>/dev/null)
+
+    # Step 2: Attempt authentication
+    # Based on typical WHU portal auth flow:
+    # POST to auth endpoint with username, password, and user_ip
+    response=$(curl -s --connect-timeout 10 --max-time 15 \
+        -b /tmp/whu-auth-cookies.txt \
+        -X POST \
+        -d "username=${USERNAME}&password=${PASSWORD}&user_ip=${user_ip}&domain=${DOMAIN}" \
+        "${AUTH_SERVER}/portal/login" \
+        -w "\n%{http_code}" 2>/dev/null)
+
+    http_code=$(echo "$response" | tail -1)
+    local body=$(echo "$response" | sed '$d')
+
+    if [ "$http_code" = "200" ]; then
+        # Check response body for success
+        if echo "$body" | grep -qi '"result":"success"\|"ret_code":2\|"msg":"login ok"'; then
+            log_msg "Authentication successful!"
+            echo "authenticated" > "$STATE_FILE"
+            return 0
+        else
+            log_msg "Authentication failed: $body"
+            echo "failed" > "$STATE_FILE"
+            return 1
+        fi
+    else
+        log_msg "HTTP error during authentication: $http_code"
+        echo "http_error" > "$STATE_FILE"
+        return 1
+    fi
+}
+
+# Get authentication status
+get_status() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    else
+        echo "unknown"
+    fi
+}
+
+# Main daemon loop
+run_daemon() {
+    log_msg "WHU Auth daemon started (interval: ${CHECK_INTERVAL}s, retry: ${RETRY_COUNT})"
+
+    echo $$ > "$PID_FILE"
+
+    while true; do
+        if check_internet; then
+            log_msg "Internet connection OK"
+            echo "online" > "$STATE_FILE"
+        else
+            log_msg "No internet connection, checking for portal..."
+
+            if detect_portal; then
+                local user_ip
+                user_ip=$(get_portal_info)
+                if [ $? -ne 0 ]; then
+                    log_msg "Cannot get network info, waiting..."
+                    sleep "$CHECK_INTERVAL"
+                    continue
+                fi
+
+                local attempt=0
+                while [ $attempt -lt $RETRY_COUNT ]; do
+                    attempt=$((attempt + 1))
+                    log_msg "Authentication attempt $attempt/$RETRY_COUNT"
+
+                    if do_auth "$user_ip"; then
+                        sleep 5
+                        if check_internet; then
+                            log_msg "Connection restored after authentication"
+                            break
+                        fi
+                    fi
+
+                    if [ $attempt -lt $RETRY_COUNT ]; then
+                        sleep 5
+                    fi
+                done
+            else
+                log_msg "No captive portal detected, but no internet. Network issue?"
+                echo "network_error" > "$STATE_FILE"
+            fi
+        fi
+
+        sleep "$CHECK_INTERVAL"
+    done
+}
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --username) USERNAME="$2"; shift 2 ;;
+        --password) PASSWORD="$2"; shift 2 ;;
+        --domain) DOMAIN="$2"; shift 2 ;;
+        --server) AUTH_SERVER="$2"; shift 2 ;;
+        --interval) CHECK_INTERVAL="$2"; shift 2 ;;
+        --retry) RETRY_COUNT="$2"; shift 2 ;;
+        --interface) INTERFACE="$2"; shift 2 ;;
+        --status)
+            get_status
+            exit 0
+            ;;
+        --check)
+            if check_internet; then
+                echo "online"
+                exit 0
+            else
+                echo "offline"
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+    log_msg "Error: username and password are required"
+    exit 1
+fi
+
+run_daemon
