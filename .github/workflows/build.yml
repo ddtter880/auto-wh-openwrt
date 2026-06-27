@@ -24,7 +24,13 @@ jobs:
 
       - name: Setup SDK
         run: |
-          [ ! -d ./scripts ] && ./setup.sh
+          if [ -f /builder/setup.sh ]; then
+            cd /builder && ./setup.sh && cd -
+          elif [ -f ./setup.sh ]; then
+            ./setup.sh
+          fi
+          [ ! -d scripts ] && ln -sf /builder/scripts scripts 2>/dev/null || true
+          ls -la scripts/ 2>/dev/null || echo "No scripts dir"
 
       - name: Update feeds
         run: |
@@ -41,8 +47,6 @@ jobs:
           cat > .config << 'EOF'
           CONFIG_TARGET_armvirt=y
           CONFIG_TARGET_armvirt_64=y
-          CONFIG_TARGET_armvirt_64_Default=y
-          CONFIG_PACKAGE_luci-base=y
           CONFIG_PACKAGE_luci-app-whu-auth=m
           EOF
           make defconfig
@@ -56,15 +60,14 @@ jobs:
           mkdir -p output
           find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
           echo "=== Build output ==="
-          ls -la output/ || echo "No ipk found in output/"
-          echo "=== Full find ==="
-          find bin/ -name "*.ipk" | head -20
+          ls -la output/ || echo "No ipk found"
 
       - name: Upload ARM ipk
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-whu-auth-arm-aarch64
           path: output/*.ipk
+          if-no-files-found: warn
           retention-days: 30
 
   build-x86:
@@ -83,7 +86,13 @@ jobs:
 
       - name: Setup SDK
         run: |
-          [ ! -d ./scripts ] && ./setup.sh
+          if [ -f /builder/setup.sh ]; then
+            cd /builder && ./setup.sh && cd -
+          elif [ -f ./setup.sh ]; then
+            ./setup.sh
+          fi
+          [ ! -d scripts ] && ln -sf /builder/scripts scripts 2>/dev/null || true
+          ls -la scripts/ 2>/dev/null || echo "No scripts dir"
 
       - name: Update feeds
         run: |
@@ -100,7 +109,6 @@ jobs:
           cat > .config << 'EOF'
           CONFIG_TARGET_x86=y
           CONFIG_TARGET_x86_64=y
-          CONFIG_PACKAGE_luci-base=y
           CONFIG_PACKAGE_luci-app-whu-auth=m
           EOF
           make defconfig
@@ -114,13 +122,12 @@ jobs:
           mkdir -p output
           find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
           echo "=== Build output ==="
-          ls -la output/ || echo "No ipk found in output/"
-          echo "=== Full find ==="
-          find bin/ -name "*.ipk" | head -20
+          ls -la output/ || echo "No ipk found"
 
       - name: Upload x86 ipk
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-whu-auth-x86-64
           path: output/*.ipk
+          if-no-files-found: warn
           retention-days: 30
