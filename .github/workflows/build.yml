@@ -40,21 +40,42 @@ jobs:
       - name: Copy package and build
         working-directory: /builder
         run: |
-          # Copy package directly into SDK's package directory
-          cp -r ${{ github.workspace }}/luci-app-whu-auth package/luci-app-whu-auth
-
-          # Verify
+          # Find where the checkout actually is inside the container
+          CHECKOUT_DIR=$(pwd -P)/../.. 
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Runner workspace: /__w"
+          
+          # The checkout lands at /__w/<repo>/<repo> in container
+          # But we're running in /builder, so find the checkout
+          ls /__w/ 2>/dev/null || true
+          ls /__w/auto-wh-openwrt/ 2>/dev/null || true
+          ls /__w/auto-wh-openwrt/auto-wh-openwrt/ 2>/dev/null || true
+          
+          # Try the standard container workspace path
+          REPO_DIR=""
+          if [ -d "/__w/auto-wh-openwrt/auto-wh-openwrt/luci-app-whu-auth" ]; then
+            REPO_DIR="/__w/auto-wh-openwrt/auto-wh-openwrt"
+          elif [ -d "$GITHUB_WORKSPACE/luci-app-whu-auth" ]; then
+            REPO_DIR="$GITHUB_WORKSPACE"
+          else
+            # Find it
+            REPO_DIR=$(find / -maxdepth 5 -name "luci-app-whu-auth" -type d 2>/dev/null | head -1 | sed 's|/luci-app-whu-auth||')
+          fi
+          
+          echo "Found repo at: $REPO_DIR"
+          ls "$REPO_DIR/luci-app-whu-auth/Makefile"
+          
+          # Copy package into SDK
+          cp -r "$REPO_DIR/luci-app-whu-auth" package/luci-app-whu-auth
           ls package/luci-app-whu-auth/Makefile
 
-          # Update feeds (standard feeds, not custom)
+          # Update feeds
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
           # Configure
           echo "CONFIG_PACKAGE_luci-app-whu-auth=m" > .config
           make defconfig
-
-          # Check if package is in config
           grep whu .config || echo "WARNING: package not in .config"
 
           # Build
