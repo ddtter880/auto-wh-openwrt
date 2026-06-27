@@ -1,4 +1,4 @@
-name: Build OpenWrt ipk
+﻿name: Build OpenWrt ipk
 
 on:
   push:
@@ -10,15 +10,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: openwrtorg/sdk:x86-64-v23.05.3
+    container: openwrt/sdk:x86-64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup SDK
+        run: |
+          [ ! -d ./scripts ] && ./setup.sh
+
       - name: Update feeds
         run: |
-          ./scripts/feeds update -a
+          ./scripts/feeds update packages luci
           ./scripts/feeds install -a
 
       - name: Copy package source
@@ -42,9 +46,8 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p output
-          find bin/packages/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \;
-          find bin/targets/ -name "*.ipk" -exec cp {} output/ \;
-          ls -la output/
+          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
+          ls -la output/ || echo "No ipk found"
 
       - name: Upload ipk artifact
         uses: actions/upload-artifact@v4
