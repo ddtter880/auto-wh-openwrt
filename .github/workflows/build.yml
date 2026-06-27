@@ -8,7 +8,59 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-arm:
+    name: Build ipk (ARM Cortex-A53 / IPQ6000)
+    runs-on: ubuntu-latest
+    container: openwrt/sdk:aarch64_cortex-a53
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SDK
+        run: |
+          [ ! -d ./scripts ] && ./setup.sh
+
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update packages luci
+          ./scripts/feeds install -a
+
+      - name: Copy package source
+        run: |
+          mkdir -p package/luci-app-whu-auth
+          cp -r luci-app-whu-auth/* package/luci-app-whu-auth/
+
+      - name: Configure build
+        run: |
+          cat > .config << 'EOF'
+          CONFIG_TARGET_armvirt=y
+          CONFIG_TARGET_armvirt_64=y
+          CONFIG_TARGET_armvirt_64_Default=y
+          CONFIG_PACKAGE_luci-base=y
+          CONFIG_PACKAGE_luci-app-whu-auth=m
+          EOF
+          make defconfig
+
+      - name: Build ipk
+        run: |
+          make package/luci-app-whu-auth/compile V=s
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p output
+          find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
+          ls -la output/ || echo "No ipk found"
+
+      - name: Upload ARM ipk
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-whu-auth-arm-aarch64
+          path: output/*.ipk
+          retention-days: 30
+
+  build-x86:
+    name: Build ipk (x86_64)
     runs-on: ubuntu-latest
     container: openwrt/sdk:x86-64
 
@@ -35,7 +87,8 @@ jobs:
           cat > .config << 'EOF'
           CONFIG_TARGET_x86=y
           CONFIG_TARGET_x86_64=y
-          CONFIG_PACKAGE_luci-app-whu-auth=y
+          CONFIG_PACKAGE_luci-base=y
+          CONFIG_PACKAGE_luci-app-whu-auth=m
           EOF
           make defconfig
 
@@ -49,9 +102,9 @@ jobs:
           find bin/ -name "luci-app-whu-auth*.ipk" -exec cp {} output/ \; || true
           ls -la output/ || echo "No ipk found"
 
-      - name: Upload ipk artifact
+      - name: Upload x86 ipk
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-whu-auth-ipk
+          name: luci-app-whu-auth-x86-64
           path: output/*.ipk
           retention-days: 30
