@@ -37,31 +37,25 @@ jobs:
           HOME=/builder ./setup.sh || true
           test -f Makefile
 
-      - name: Register and build package
+      - name: Copy package and build
         working-directory: /builder
         run: |
-          # src-link expects a directory with package subdirectories
-          # Each subdir must have a Makefile
-          # Our repo structure: $GITHUB_WORKSPACE/luci-app-whu-auth/Makefile
-          echo "src-link custom_packages ${{ github.workspace }}" >> feeds.conf
-          cat feeds.conf
+          # Copy package directly into SDK's package directory
+          cp -r ${{ github.workspace }}/luci-app-whu-auth package/luci-app-whu-auth
 
-          # Update our custom feed
-          ./scripts/feeds update custom_packages
-          ./scripts/feeds install -a -p custom_packages
+          # Verify
+          ls package/luci-app-whu-auth/Makefile
 
-          # Check if package was found
-          echo "=== Feeds list ==="
-          ./scripts/feeds list | grep -i whu || echo "Package NOT found in feeds"
+          # Update feeds (standard feeds, not custom)
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
-          # Check package directory
-          echo "=== Package dir ==="
-          ls -la package/custom_packages/ 2>/dev/null || ls -la package/feeds/custom_packages/ 2>/dev/null || echo "No package dir"
-
-          # Configure with the package
+          # Configure
           echo "CONFIG_PACKAGE_luci-app-whu-auth=m" > .config
           make defconfig
-          grep -i whu .config || echo "Package NOT in .config"
+
+          # Check if package is in config
+          grep whu .config || echo "WARNING: package not in .config"
 
           # Build
           make package/luci-app-whu-auth/compile V=s

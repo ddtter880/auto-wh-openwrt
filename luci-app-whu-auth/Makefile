@@ -7,21 +7,13 @@ PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=cccht
 
+LUCI_TITLE:=WHU Campus Network Auto-Authentication
+LUCI_DESCRIPTION:=Automatically authenticate to WuHan University campus network portal.
+LUCI_DEPENDS:=+luci-base +curl
+
+PKGARCH:=all
+
 include $(INCLUDE_DIR)/package.mk
-
-define Package/luci-app-whu-auth
-  SECTION:=luci
-  CATEGORY:=LuCI
-  SUBMENU:=3. Applications
-  TITLE:=WHU Campus Network Auto-Authentication
-  DEPENDS:=+luci-base +curl
-  PKGARCH:=all
-endef
-
-define Package/luci-app-whu-auth/description
-  Automatically authenticate to WuHan University campus network portal.
-  Based on auto-whu-openwrt project.
-endef
 
 define Build/Compile
 endef
